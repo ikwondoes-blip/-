@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>내 기금 대여 조회</title>
+<meta name="theme-color" content="#0F6E56">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="기금조회">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#ffffff;--bg2:#f7f7f5;--bg3:#f0ede8;
+  --text:#1a1a18;--text2:#6b6b65;--text3:#9b9b93;
+  --border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.2);
+  --accent:#0F6E56;--accent-fg:#ffffff;
+  --green-bg:#E1F5EE;--green-fg:#0F6E56;
+  --amber-bg:#FAEEDA;--amber-fg:#854F0B;
+  --gray-bg:#F1EFE8;--gray-fg:#5F5E5A;
+  --red-bg:#FCEBEB;--red-fg:#A32D2D;
+  --blue-bg:#E6F1FB;--blue-fg:#185FA5;
+  --purple-bg:#F3E8FA;--purple-fg:#4A148C;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#1e1e1c;--bg2:#282825;--bg3:#161615;
+    --text:#f0ede8;--text2:#a0a09a;--text3:#6b6b65;
+    --border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.2);
+    --accent:#5DCAA5;--accent-fg:#04342C;
+    --green-bg:#04342C;--green-fg:#9FE1CB;
+    --amber-bg:#412402;--amber-fg:#FAC775;
+    --gray-bg:#2C2C2A;--gray-fg:#B4B2A9;
+    --red-bg:#501313;--red-fg:#F7C1C1;
+    --blue-bg:#042C53;--blue-fg:#B5D4F4;
+    --purple-bg:#2E0D45;--purple-fg:#E1BEE7;
+  }
+}
+html,body{background:var(--bg3)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Noto Sans KR','Malgun Gothic',sans-serif;color:var(--text);font-size:15px;min-height:100vh;-webkit-text-size-adjust:100%}
+.wrap{max-width:480px;margin:0 auto;padding:max(20px,env(safe-area-inset-top)) 16px max(32px,env(safe-area-inset-bottom))}
+.brand{display:flex;align-items:center;gap:10px;margin:8px 0 20px}
+.brand img{width:36px;height:36px;border-radius:9px}
+.brand h1{font-size:17px;font-weight:700;letter-spacing:-.3px}
+.brand p{font-size:12px;color:var(--text2)}
+.card{background:var(--bg);border:0.5px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px}
+.card h2{font-size:16px;font-weight:600;margin-bottom:6px}
+.card .desc{font-size:13px;color:var(--text2);line-height:1.55;margin-bottom:16px}
+label{display:block;font-size:13px;color:var(--text2);margin:12px 0 6px}
+input[type=text],input[type=password]{width:100%;padding:12px 14px;font-size:16px;border:0.5px solid var(--border2);border-radius:10px;background:var(--bg);color:var(--text);font-family:inherit}
+input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.check{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);margin-top:14px}
+.btn{width:100%;margin-top:18px;padding:13px;font-size:15px;font-weight:600;border:none;border-radius:10px;background:var(--accent);color:var(--accent-fg);cursor:pointer;font-family:inherit}
+.btn:disabled{opacity:.5;cursor:default}
+.btn-ghost{background:transparent;color:var(--text2);border:0.5px solid var(--border2);font-weight:500}
+.msg{font-size:13px;margin-top:12px;padding:10px 12px;border-radius:8px;display:none;line-height:1.5}
+.msg.err{display:block;background:var(--red-bg);color:var(--red-fg)}
+.msg.ok{display:block;background:var(--green-bg);color:var(--green-fg)}
+.rules{font-size:12px;color:var(--text2);margin-top:8px;line-height:1.6}
+.hero{background:var(--accent);color:var(--accent-fg);border:none}
+.hero .who{font-size:14px;opacity:.85}
+.hero .lbl{font-size:13px;opacity:.85;margin-top:14px}
+.hero .big{font-size:32px;font-weight:700;letter-spacing:-1px;margin-top:2px}
+.hero .sub{display:flex;gap:16px;margin-top:14px;font-size:13px;flex-wrap:wrap}
+.hero .sub b{font-weight:600}
+.sec-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.sec-title h2{margin:0}
+.sec-total{font-size:13px;color:var(--text2)}
+.loan{border-top:0.5px solid var(--border);padding:14px 0 2px}
+.loan:first-of-type{border-top:none;padding-top:2px}
+.loan-head{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;color:var(--text2)}
+.badge{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600}
+.badge-active{background:var(--green-bg);color:var(--green-fg)}
+.badge-grace{background:var(--amber-bg);color:var(--amber-fg)}
+.badge-done{background:var(--gray-bg);color:var(--gray-fg)}
+.badge-leave{background:var(--purple-bg);color:var(--purple-fg)}
+.rows{display:grid;grid-template-columns:1fr auto;row-gap:7px;font-size:14px}
+.rows dt{color:var(--text2)}
+.rows dd{text-align:right;font-variant-numeric:tabular-nums}
+.rows .em{font-weight:700}
+.empty{font-size:14px;color:var(--text2);text-align:center;padding:12px 0}
+.foot{font-size:12px;color:var(--text3);text-align:center;line-height:1.7;margin-top:8px}
+.links{display:flex;gap:8px}
+.links .btn{margin-top:4px}
+.hidden{display:none!important}
+.spinner{margin:60px auto;width:28px;height:28px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <img src="icon.svg" alt="">
+    <div><h1>내 기금 대여 조회</h1><p>안산도시개발(주) 사내근로복지기금</p></div>
+  </div>
+
+  <div id="vLoading"><div class="spinner"></div></div>
+
+  <!-- 설정 누락 -->
+  <div id="vConfig" class="card hidden">
+    <h2>설정이 필요합니다</h2>
+    <p class="desc">firebase-config.js에 Firebase 설정값이 아직 입력되지 않았습니다. 총무팀에 문의해 주세요.</p>
+  </div>
+
+  <!-- 로그인 -->
+  <form id="vLogin" class="card hidden" autocomplete="on">
+    <h2>로그인</h2>
+    <p class="desc">아이디는 본인 이름입니다. 처음 로그인할 때 비밀번호는 생년월일 6자리(예: 900115)입니다.</p>
+    <label for="inName">이름</label>
+    <input id="inName" type="text" autocomplete="username" placeholder="홍길동" required>
+    <label for="inPw">비밀번호</label>
+    <input id="inPw" type="password" autocomplete="current-password" required>
+    <label class="check"><input id="inKeep" type="checkbox"> 이 기기에서 로그인 유지</label>
+    <button class="btn" id="btnLogin" type="submit">로그인</button>
+    <div class="msg" id="loginMsg"></div>
+  </form>
+
+  <!-- 비밀번호 변경 -->
+  <form id="vChange" class="card hidden">
+    <h2 id="chTitle">비밀번호 변경</h2>
+    <p class="desc" id="chDesc">처음 로그인하셨습니다. 개인정보 보호를 위해 새 비밀번호로 바꿔 주세요.</p>
+    <input type="text" id="chUser" autocomplete="username" class="hidden" tabindex="-1" aria-hidden="true">
+    <label for="chCur">현재 비밀번호</label>
+    <input id="chCur" type="password" autocomplete="current-password" required>
+    <label for="chNew">새 비밀번호</label>
+    <input id="chNew" type="password" autocomplete="new-password" required>
+    <label for="chNew2">새 비밀번호 확인</label>
+    <input id="chNew2" type="password" autocomplete="new-password" required>
+    <p class="rules">· 8자 이상, 영문과 숫자를 모두 포함<br>· 생년월일 등 남이 알기 쉬운 값은 피해 주세요</p>
+    <button class="btn" id="btnChange" type="submit">변경하기</button>
+    <button class="btn btn-ghost hidden" id="btnChangeCancel" type="button">취소</button>
+    <div class="msg" id="chMsg"></div>
+  </form>
+
+  <!-- 내 대여 현황 -->
+  <div id="vMain" class="hidden">
+    <div class="card hero">
+      <div class="who" id="mWho"></div>
+      <div class="lbl" id="mMonth"></div>
+      <div class="big" id="mTotal"></div>
+      <div class="sub" id="mSub"></div>
+    </div>
+    <div id="mFunds"></div>
+    <div class="links">
+      <button class="btn btn-ghost" id="btnGoChange" type="button">비밀번호 변경</button>
+      <button class="btn btn-ghost" id="btnLogout" type="button">로그아웃</button>
+    </div>
+    <p class="foot" id="mFoot"></p>
+  </div>
+
+  <!-- 데이터 없음 / 오류 -->
+  <div id="vNone" class="card hidden">
+    <h2 id="noneTitle">조회할 정보가 없습니다</h2>
+    <p class="desc" id="noneDesc"></p>
+    <button class="btn btn-ghost" id="btnLogout2" type="button">로그아웃</button>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const VIEWS = ['vLoading','vConfig','vLogin','vChange','vMain','vNone'];
+function show(id){ VIEWS.forEach(v => $(v).classList.toggle('hidden', v !== id)); }
+function msg(el, text, ok){ el.textContent = text || ''; el.className = 'msg' + (text ? (ok ? ' ok' : ' err') : ''); }
+function won(n){ return (Math.round(n || 0)).toLocaleString('ko-KR') + '원'; }
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+const AUTH_ERRORS = {
+  'auth/invalid-credential': '이름 또는 비밀번호가 맞지 않습니다.',
+  'auth/wrong-password': '비밀번호가 맞지 않습니다.',
+  'auth/user-not-found': '이름 또는 비밀번호가 맞지 않습니다.',
+  'auth/invalid-email': '이름을 다시 확인해 주세요.',
+  'auth/too-many-requests': '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.',
+  'auth/network-request-failed': '인터넷 연결을 확인해 주세요.',
+  'auth/weak-password': '비밀번호가 너무 단순합니다.',
+  'auth/requires-recent-login': '보안을 위해 다시 로그인한 뒤 변경해 주세요.',
+};
+const authErr = e => AUTH_ERRORS[e && e.code] || ('오류가 발생했습니다. (' + ((e && (e.code || e.message)) || '알 수 없음') + ')');
+
+const cfg = window.FUND_FIREBASE_CONFIG || {};
+if (!cfg.apiKey || !cfg.projectId) {
+  show('vConfig');
+} else {
+  start();
+}
+
+function start(){
+  firebase.initializeApp(cfg);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  let member = null, forced = false;
+
+  const memberRef = user => db.collection('members').doc(user.email.split('@')[0]);
+
+  auth.onAuthStateChanged(async user => {
+    if (!user) { member = null; show('vLogin'); return; }
+    show('vLoading');
+    try {
+      const snap = await memberRef(user).get();
+      if (!snap.exists) throw { code: 'not-found' };
+      member = snap.data();
+    } catch (e) {
+      $('noneTitle').textContent = '조회할 정보가 없습니다';
+      $('noneDesc').textContent = (e.code === 'permission-denied' || e.code === 'not-found')
+        ? '등록된 대여 정보를 찾지 못했습니다. 총무팀에 문의해 주세요.'
+        : '정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요. (' + (e.code || e.message) + ')';
+      show('vNone');
+      return;
+    }
+    if (member.mustChange) openChange(true); else renderMain();
+  });
+
+  $('vLogin').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const name = $('inName').value.trim();
+    const pw = $('inPw').value;
+    if (!name || !pw) return;
+    msg($('loginMsg'));
+    $('btnLogin').disabled = true;
+    try {
+      await auth.setPersistence($('inKeep').checked
+        ? firebase.auth.Auth.Persistence.LOCAL
+        : firebase.auth.Auth.Persistence.SESSION);
+      await auth.signInWithEmailAndPassword(fundEmailOf(name), pw);
+      $('chCur').value = pw;
+      $('inPw').value = '';
+    } catch (e) {
+      msg($('loginMsg'), authErr(e));
+    } finally {
+      $('btnLogin').disabled = false;
+    }
+  });
+
+  function openChange(isForced){
+    forced = isForced;
+    $('chTitle').textContent = isForced ? '새 비밀번호 설정' : '비밀번호 변경';
+    $('chDesc').textContent = isForced
+      ? '처음 로그인하셨습니다. 개인정보 보호를 위해 새 비밀번호로 바꿔야 조회할 수 있습니다.'
+      : '새 비밀번호를 입력해 주세요.';
+    $('chUser').value = member ? member.name : '';
+    if (!isForced) $('chCur').value = '';
+    $('chNew').value = $('chNew2').value = '';
+    $('btnChangeCancel').classList.toggle('hidden', isForced);
+    msg($('chMsg'));
+    show('vChange');
+  }
+
+  $('vChange').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const cur = $('chCur').value, nw = $('chNew').value, nw2 = $('chNew2').value;
+    if (nw !== nw2) return msg($('chMsg'), '새 비밀번호가 서로 다릅니다.');
+    if (nw.length < 8 || !/[A-Za-z]/.test(nw) || !/\d/.test(nw)) return msg($('chMsg'), '8자 이상, 영문과 숫자를 모두 넣어 주세요.');
+    if (nw === cur) return msg($('chMsg'), '현재 비밀번호와 다른 값으로 정해 주세요.');
+    $('btnChange').disabled = true;
+    msg($('chMsg'));
+    try {
+      const user = auth.currentUser;
+      await user.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(user.email, cur));
+      await user.updatePassword(nw);
+      if (member.mustChange) {
+        await memberRef(user).update({ mustChange: false, pwChangedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        member.mustChange = false;
+      }
+      $('chCur').value = $('chNew').value = $('chNew2').value = '';
+      renderMain('비밀번호가 변경되었습니다.');
+    } catch (e) {
+      msg($('chMsg'), e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password'
+        ? '현재 비밀번호가 맞지 않습니다.' : authErr(e));
+    } finally {
+      $('btnChange').disabled = false;
+    }
+  });
+
+  $('btnChangeCancel').onclick = () => renderMain();
+  $('btnGoChange').onclick = () => openChange(false);
+  $('btnLogout').onclick = $('btnLogout2').onclick = () => { $('chCur').value = ''; auth.signOut(); };
+
+  function renderMain(notice){
+    const m = member;
+    const living = m.living || [], housing = m.housing || [];
+    const sum = arr => arr.reduce((a, e) => ({
+      bal: a.bal + (e.bal || 0), total: a.total + (e.total || 0), afterBal: a.afterBal + (e.afterBal || 0)
+    }), { bal: 0, total: 0, afterBal: 0 });
+    const L = sum(living), H = sum(housing);
+
+    $('mWho').textContent = m.name + '님';
+    $('mMonth').textContent = m.ym ? `${m.ym.y}년 ${m.ym.m}월 급여 공제 예정액` : '이번 달 공제 예정액';
+    $('mTotal').textContent = won(L.total + H.total);
+    $('mSub').innerHTML = `<span>대여잔액 <b>${won(L.bal + H.bal)}</b></span><span>공제 후 잔액 <b>${won(L.afterBal + H.afterBal)}</b></span>`;
+
+    const block = (title, arr, s, isLiving) => {
+      if (!arr.length) return '';
+      const items = arr.map((e, i) => `
+        <div class="loan">
+          <div class="loan-head">
+            ${arr.length > 1 ? `<span>${i + 1}건차</span>` : ''}
+            <span class="badge badge-${esc(e.statusCls || 'active')}">${esc(e.status || '')}</span>
+            <span>${isLiving
+              ? (e.startYM ? '상환시작 ' + esc(e.startYM) : '')
+              : [e.htype, e.repayDate ? '원금상환 ' + e.repayDate : ''].filter(Boolean).map(esc).join(' · ')}</span>
+          </div>
+          <dl class="rows">
+            <dt>대여잔액</dt><dd>${won(e.bal)}</dd>
+            <dt>상환원금</dt><dd>${won(e.prin)}</dd>
+            <dt>상환이자</dt><dd>${won(e.interest)}</dd>
+            <dt class="em">이번 달 공제액</dt><dd class="em">${won(e.total)}</dd>
+            <dt>공제 후 잔액</dt><dd>${won(e.afterBal)}</dd>
+          </dl>
+        </div>`).join('');
+      return `<div class="card"><div class="sec-title"><h2>${title}</h2><span class="sec-total">공제 ${won(s.total)}</span></div>${items}</div>`;
+    };
+    $('mFunds').innerHTML = (living.length || housing.length)
+      ? block('생활안정자금', living, L, true) + block('주택자금', housing, H, false)
+      : '<div class="card"><p class="empty">현재 대여 중인 기금이 없습니다.</p></div>';
+
+    const at = m.publishedAt && m.publishedAt.toDate ? m.publishedAt.toDate() : null;
+    $('mFoot').innerHTML = (notice ? `<b>${esc(notice)}</b><br>` : '')
+      + (at ? `총무팀 게시 ${at.getFullYear()}.${at.getMonth() + 1}.${at.getDate()} 기준<br>` : '')
+      + '실제 공제액은 급여명세서를 기준으로 합니다. 문의: 총무팀';
+    show('vMain');
+  }
+}
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>
