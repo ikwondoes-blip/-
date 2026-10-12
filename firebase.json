@@ -1,0 +1,16 @@
+{
+  "hosting": {
+    "public": "fund",
+    "ignore": ["firebase.json", "**/.*", "README.md", "firestore.rules"],
+    "headers": [
+      {
+        "source": "**/@(index.html|firebase-config.js|sw.js|manifest.webmanifest)",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      },
+      {
+        "source": "/",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      }
+    ]
+  }
+}
