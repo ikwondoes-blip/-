@@ -33,7 +33,19 @@
 5. 톱니바퀴 → **프로젝트 설정 → 일반 → 내 앱 → 웹(`</>`) 아이콘**
    - 앱 닉네임: `기금조회` (Hosting 체크 안 함) → 앱 등록
    - 화면에 나오는 `const firebaseConfig = { ... };` 부분을 복사해 둡니다.
-6. Authentication → **설정 → 승인된 도메인 → 도메인 추가**: `ikwondoes-blip.github.io`
+6. Authentication → **설정 → 승인된 도메인**에 `asudi-fund.web.app`이 있는지 확인 (보통 자동으로 들어가 있음)
+
+## 1-1. 앱 주소(asudi-fund.web.app) 자동 배포 설정 (처음 한 번)
+
+직원 앱은 **https://asudi-fund.web.app** 에서 열립니다. main 브랜치에 `fund/` 변경이 합쳐지면 GitHub가 자동으로 Firebase Hosting에 올립니다(`.github/workflows/firebase-hosting.yml`).
+
+1. Firebase 콘솔 → 왼쪽 **빌드 → Hosting → 시작하기** → 안내 화면은 **다음**만 눌러 끝까지 진행 (명령어 입력은 하지 않아도 됨)
+2. 톱니바퀴 → **프로젝트 설정 → 서비스 계정** 탭 → **새 비공개 키 생성** → JSON 파일이 내려받아집니다.
+   - 이 파일은 **비밀번호와 같습니다.** 아래 3번에 넣은 뒤 PC에서 지우고, 메일·메신저로 보내지 마세요.
+3. GitHub 저장소 → **Settings → Secrets and variables → Actions → New repository secret**
+   - Name: `FIREBASE_SERVICE_ACCOUNT`
+   - Secret: 2번 JSON 파일을 메모장으로 열어 **내용 전체**를 붙여넣기 → Add secret
+4. 저장소 **Actions** 탭 → "직원 앱 배포 (Firebase Hosting)" → **Run workflow** → 초록 체크가 뜨면 https://asudi-fund.web.app 접속 확인
 
 ## 2. 설정값 넣기
 
@@ -73,13 +85,13 @@
 
 > 휴대폰에서 아래 주소를 열고, 이름과 생년월일 6자리로 로그인하세요.
 > 처음 로그인하면 새 비밀번호를 정해야 합니다.
-> **https://ikwondoes-blip.github.io/-/fund/**
+> **https://asudi-fund.web.app**
 >
 > 홈 화면에 추가하면 앱처럼 쓸 수 있습니다.
 > - 아이폰(사파리): 공유 버튼 → 홈 화면에 추가
 > - 안드로이드(크롬): ⋮ 메뉴 → 홈 화면에 추가(앱 설치)
 
-※ 주소는 GitHub 저장소 설정 → Pages에서 기본 브랜치(main)를 게시하도록 켜 두어야 열립니다.
+※ 예전 주소(`ikwondoes-blip.github.io/-/fund/`)도 당분간 열리지만, 직원에게는 위 주소만 안내하세요.
 
 ## 6. 비밀번호를 잊은 직원
 
