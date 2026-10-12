@@ -95,6 +95,16 @@ input:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .meter{height:6px;border-radius:3px;background:rgba(255,255,255,.3);margin-top:14px;overflow:hidden}
 .meter i{display:block;height:100%;background:var(--accent-fg)}
 .rows .muted{color:var(--text3)}
+.consent{font-size:13px;line-height:1.65;color:var(--text);max-height:46vh;overflow:auto;border:0.5px solid var(--border);border-radius:10px;padding:12px 14px;background:var(--bg2)}
+.consent h3{font-size:13px;font-weight:700;margin:12px 0 4px}
+.consent h3:first-child{margin-top:0}
+.consent table{width:100%;border-collapse:collapse;margin:4px 0;font-size:12px}
+.consent th,.consent td{border:0.5px solid var(--border2);padding:5px 7px;text-align:left;vertical-align:top}
+.consent th{background:var(--bg);width:30%;font-weight:600}
+.consent p.note{color:var(--text2);font-size:12px;margin-top:6px}
+.agree{display:flex;gap:8px;align-items:flex-start;font-size:14px;margin-top:12px;line-height:1.45}
+.agree input{margin-top:3px;width:18px;height:18px;flex:none}
+.linkbtn{background:none;border:none;color:var(--text2);text-decoration:underline;font:inherit;font-size:12px;cursor:pointer;padding:0}
 .hidden{display:none!important}
 .spinner{margin:60px auto;width:28px;height:28px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -168,6 +178,45 @@ input:focus{outline:2px solid var(--accent);outline-offset:-1px}
     <p class="foot" id="mFoot"></p>
   </div>
 
+  <!-- 개인정보 동의 -->
+  <div id="vConsent" class="card hidden">
+    <h2>개인정보 처리 안내 및 동의</h2>
+    <p class="desc" id="csDesc">조회 서비스를 이용하려면 아래 내용을 확인하고 동의해 주세요.</p>
+    <div class="consent">
+      <h3>1. 개인정보 수집·이용</h3>
+      <table>
+        <tr><th>처리자</th><td>안산도시개발(주) 사내근로복지기금</td></tr>
+        <tr><th>항목</th><td>성명, 기금 대여 내역(대여잔액·상환원금·이자·공제액), 선택적복지비 내역(배정액·분기별 사용액·잔액), 로그인 비밀번호(암호화 저장), 접속 기록</td></tr>
+        <tr><th>목적</th><td>본인의 기금 대여 및 선택적복지비 현황 온라인 조회</td></tr>
+        <tr><th>보유 기간</th><td><b>퇴직 또는 대여 상환·복지비 정산 종료 후 1년</b>, 동의 철회 시 즉시 삭제</td></tr>
+      </table>
+      <h3>2. 개인정보 처리위탁</h3>
+      <table>
+        <tr><th>수탁자</th><td>Google LLC (Firebase)</td></tr>
+        <tr><th>위탁 업무</th><td>조회 서비스 운영을 위한 데이터 보관 및 로그인 인증</td></tr>
+      </table>
+      <h3>3. 개인정보 국외 이전</h3>
+      <table>
+        <tr><th>이전받는 자</th><td>Google LLC (연락처: https://support.google.com/policies)</td></tr>
+        <tr><th>이전 국가</th><td>미국 등 Google 데이터센터 소재 국가<br>※ 대여·복지비 내역은 대한민국(서울) 서버에 저장</td></tr>
+        <tr><th>이전 항목</th><td>로그인 계정 정보(성명을 변환한 계정값, 암호화된 비밀번호, 접속 기록)</td></tr>
+        <tr><th>일시·방법</th><td>로그인할 때마다 네트워크를 통해 전송</td></tr>
+        <tr><th>목적·보유 기간</th><td>로그인 인증 / 계정 삭제 시까지</td></tr>
+      </table>
+      <h3>4. 동의를 거부할 권리</h3>
+      <p>동의를 거부할 수 있으며, 거부해도 기금 대여나 복지비 지급에는 아무런 불이익이 없습니다. 다만 이 앱으로 조회할 수 없으며, 현황은 총무팀에 직접 문의하시면 됩니다.</p>
+      <p class="note">동의 후에도 언제든 총무팀에 요청하여 동의를 철회하고 계정과 정보를 삭제할 수 있습니다.</p>
+    </div>
+    <div id="csChecks">
+      <label class="agree"><input type="checkbox" id="csA"> <span>[필수] 개인정보 수집·이용 및 처리위탁에 동의합니다.</span></label>
+      <label class="agree"><input type="checkbox" id="csB"> <span>[필수] 개인정보 국외 이전에 동의합니다.</span></label>
+      <button class="btn" id="btnAgree" type="button" disabled>동의하고 계속</button>
+      <button class="btn btn-ghost" id="btnDisagree" type="button">동의하지 않음</button>
+    </div>
+    <button class="btn btn-ghost hidden" id="btnConsentBack" type="button">돌아가기</button>
+    <div class="msg" id="csMsg"></div>
+  </div>
+
   <!-- 데이터 없음 / 오류 -->
   <div id="vNone" class="card hidden">
     <h2 id="noneTitle">조회할 정보가 없습니다</h2>
@@ -178,7 +227,9 @@ input:focus{outline:2px solid var(--accent);outline-offset:-1px}
 
 <script>
 const $ = id => document.getElementById(id);
-const VIEWS = ['vLoading','vConfig','vLogin','vChange','vMain','vNone'];
+const VIEWS = ['vLoading','vConfig','vLogin','vConsent','vChange','vMain','vNone'];
+// 동의 문구를 바꾸면 이 값을 올려 주세요. 모든 직원에게 다시 동의를 받습니다.
+const CONSENT_VER = '2026-10';
 function show(id){ VIEWS.forEach(v => $(v).classList.toggle('hidden', v !== id)); }
 function msg(el, text, ok){ el.textContent = text || ''; el.className = 'msg' + (text ? (ok ? ' ok' : ' err') : ''); }
 function won(n){ return (Math.round(n || 0)).toLocaleString('ko-KR') + '원'; }
@@ -226,7 +277,7 @@ function start(){
       show('vNone');
       return;
     }
-    if (member.mustChange) openChange(true); else renderMain();
+    next();
   });
 
   $('vLogin').addEventListener('submit', async ev => {
@@ -249,6 +300,47 @@ function start(){
       $('btnLogin').disabled = false;
     }
   });
+
+  // 로그인 후 순서: 개인정보 동의 → (첫 로그인이면) 비밀번호 변경 → 조회
+  function next(notice){
+    if (member.consentVer !== CONSENT_VER) openConsent(false);
+    else if (member.mustChange) openChange(true);
+    else renderMain(notice);
+  }
+
+  function openConsent(readOnly){
+    $('csChecks').classList.toggle('hidden', readOnly);
+    $('btnConsentBack').classList.toggle('hidden', !readOnly);
+    const at = member.consentAt && member.consentAt.toDate ? member.consentAt.toDate() : null;
+    $('csDesc').textContent = readOnly
+      ? (at ? `${at.getFullYear()}.${at.getMonth() + 1}.${at.getDate()}에 동의하셨습니다. 철회를 원하시면 총무팀에 요청해 주세요.` : '')
+      : '조회 서비스를 이용하려면 아래 내용을 확인하고 동의해 주세요.';
+    $('csA').checked = $('csB').checked = false;
+    $('btnAgree').disabled = true;
+    msg($('csMsg'));
+    show('vConsent');
+  }
+  const syncAgree = () => { $('btnAgree').disabled = !($('csA').checked && $('csB').checked); };
+  $('csA').onchange = $('csB').onchange = syncAgree;
+
+  $('btnAgree').onclick = async () => {
+    $('btnAgree').disabled = true;
+    try {
+      await memberRef(auth.currentUser).update({ consentVer: CONSENT_VER, consentAt: firebase.firestore.FieldValue.serverTimestamp() });
+      member.consentVer = CONSENT_VER;
+      member.consentAt = firebase.firestore.Timestamp.now();
+      next();
+    } catch (e) {
+      msg($('csMsg'), '동의 내용을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요. (' + (e.code || e.message) + ')');
+      syncAgree();
+    }
+  };
+  $('btnDisagree').onclick = () => {
+    $('noneTitle').textContent = '동의하지 않으셨습니다';
+    $('noneDesc').textContent = '앱 조회는 이용할 수 없지만 기금 대여와 복지비 지급에는 아무런 불이익이 없습니다. 현황 확인이나 정보 삭제를 원하시면 총무팀에 문의해 주세요.';
+    show('vNone');
+  };
+  $('btnConsentBack').onclick = () => renderMain();
 
   function openChange(isForced){
     forced = isForced;
@@ -281,7 +373,7 @@ function start(){
         member.mustChange = false;
       }
       $('chCur').value = $('chNew').value = $('chNew2').value = '';
-      renderMain('비밀번호가 변경되었습니다.');
+      next('비밀번호가 변경되었습니다.');
     } catch (e) {
       msg($('chMsg'), e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password'
         ? '현재 비밀번호가 맞지 않습니다.' : authErr(e));
@@ -387,7 +479,8 @@ function start(){
     $('mFoot').innerHTML = (notice ? `<b>${esc(notice)}</b><br>` : '')
       + (fundAt ? `기금 대여: 총무팀 게시 ${fundAt} 기준 · 실제 공제액은 급여명세서 기준<br>` : '')
       + (welAt ? `선택적복지비: 총무팀 게시 ${welAt} 기준<br>` : '')
-      + '문의: 총무팀';
+      + '문의: 총무팀 · <button type="button" class="linkbtn" id="btnPrivacy">개인정보 처리 안내</button>';
+    $('btnPrivacy').onclick = () => openConsent(true);
 
     const hasFund = living.length || housing.length;
     switchTab(currentTab || (hasFund || !m.welfare ? 'fund' : 'wel'));
