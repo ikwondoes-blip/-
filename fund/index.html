@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>내 기금 대여 조회</title>
+<title>내 기금·복지 조회</title>
 <meta name="theme-color" content="#0F6E56">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="기금조회">
+<meta name="apple-mobile-web-app-title" content="복지조회">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -89,6 +89,12 @@ input:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .foot{font-size:12px;color:var(--text3);text-align:center;line-height:1.7;margin-top:8px}
 .links{display:flex;gap:8px}
 .links .btn{margin-top:4px}
+.tabs{display:flex;gap:4px;background:var(--bg);border:0.5px solid var(--border);border-radius:12px;padding:4px;margin-bottom:12px}
+.tabs button{flex:1;padding:10px;border:none;border-radius:9px;background:transparent;color:var(--text2);font-size:14px;font-weight:600;font-family:inherit;cursor:pointer}
+.tabs button.on{background:var(--accent);color:var(--accent-fg)}
+.meter{height:6px;border-radius:3px;background:rgba(255,255,255,.3);margin-top:14px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent-fg)}
+.rows .muted{color:var(--text3)}
 .hidden{display:none!important}
 .spinner{margin:60px auto;width:28px;height:28px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -98,7 +104,7 @@ input:focus{outline:2px solid var(--accent);outline-offset:-1px}
 <div class="wrap">
   <div class="brand">
     <img src="icon.svg" alt="">
-    <div><h1>내 기금 대여 조회</h1><p>안산도시개발(주) 사내근로복지기금</p></div>
+    <div><h1>내 기금·복지 조회</h1><p>안산도시개발(주) 사내근로복지기금</p></div>
   </div>
 
   <div id="vLoading"><div class="spinner"></div></div>
@@ -141,13 +147,20 @@ input:focus{outline:2px solid var(--accent);outline-offset:-1px}
 
   <!-- 내 대여 현황 -->
   <div id="vMain" class="hidden">
-    <div class="card hero">
-      <div class="who" id="mWho"></div>
-      <div class="lbl" id="mMonth"></div>
-      <div class="big" id="mTotal"></div>
-      <div class="sub" id="mSub"></div>
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" id="tabFund" data-tab="fund">기금 대여</button>
+      <button type="button" role="tab" id="tabWel" data-tab="wel">선택적복지비</button>
     </div>
-    <div id="mFunds"></div>
+    <div id="pFund">
+      <div class="card hero">
+        <div class="who" id="mWho"></div>
+        <div class="lbl" id="mMonth"></div>
+        <div class="big" id="mTotal"></div>
+        <div class="sub" id="mSub"></div>
+      </div>
+      <div id="mFunds"></div>
+    </div>
+    <div id="pWel" class="hidden"></div>
     <div class="links">
       <button class="btn btn-ghost" id="btnGoChange" type="button">비밀번호 변경</button>
       <button class="btn btn-ghost" id="btnLogout" type="button">로그아웃</button>
@@ -279,7 +292,48 @@ function start(){
 
   $('btnChangeCancel').onclick = () => renderMain();
   $('btnGoChange').onclick = () => openChange(false);
-  $('btnLogout').onclick = $('btnLogout2').onclick = () => { $('chCur').value = ''; auth.signOut(); };
+  $('btnLogout').onclick = $('btnLogout2').onclick = () => { $('chCur').value = ''; currentTab = null; auth.signOut(); };
+
+  let currentTab = null;
+  function switchTab(tab){
+    currentTab = tab;
+    $('tabFund').classList.toggle('on', tab === 'fund');
+    $('tabWel').classList.toggle('on', tab === 'wel');
+    $('tabFund').setAttribute('aria-selected', tab === 'fund');
+    $('tabWel').setAttribute('aria-selected', tab === 'wel');
+    $('pFund').classList.toggle('hidden', tab !== 'fund');
+    $('pWel').classList.toggle('hidden', tab !== 'wel');
+  }
+  $('tabFund').onclick = () => switchTab('fund');
+  $('tabWel').onclick = () => switchTab('wel');
+
+  function renderWelfare(m){
+    const w = m.welfare;
+    if (!w) {
+      $('pWel').innerHTML = '<div class="card"><p class="empty">선택적복지비 정보가 아직 게시되지 않았습니다.</p></div>';
+      return;
+    }
+    const used = (w.used || []).reduce((a, b) => a + (b || 0), 0);
+    const pct = w.alloc > 0 ? Math.min(100, Math.round(used / w.alloc * 100)) : 0;
+    const rows = [0, 1, 2, 3].map(i => {
+      const done = w.quarters ? w.quarters[i] : true;
+      return `<dt>${i + 1}분기</dt><dd class="${done ? '' : 'muted'}">${done ? won((w.used || [])[i]) : '집행 전'}</dd>`;
+    }).join('');
+    $('pWel').innerHTML = `
+      <div class="card hero">
+        <div class="who">${esc(m.name)}님</div>
+        <div class="lbl">${esc(w.year)}년 선택적복지비 남은 금액</div>
+        <div class="big">${won(w.remain)}</div>
+        <div class="sub"><span>배정 <b>${won(w.alloc)}</b></span><span>사용 <b>${won(used)}</b></span></div>
+        <div class="meter" aria-label="사용률 ${pct}%"><i style="width:${pct}%"></i></div>
+      </div>
+      <div class="card">
+        <div class="sec-title"><h2>분기별 사용</h2><span class="sec-total">사용률 ${pct}%</span></div>
+        <dl class="rows">${rows}
+          <dt class="em">합계</dt><dd class="em">${won(used)}</dd>
+        </dl>
+      </div>`;
+  }
 
   function renderMain(notice){
     const m = member;
@@ -319,10 +373,24 @@ function start(){
       ? block('생활안정자금', living, L, true) + block('주택자금', housing, H, false)
       : '<div class="card"><p class="empty">현재 대여 중인 기금이 없습니다.</p></div>';
 
-    const at = m.publishedAt && m.publishedAt.toDate ? m.publishedAt.toDate() : null;
+    if (!m.ym && !living.length && !housing.length) {
+      $('mWho').textContent = m.name + '님';
+      $('mMonth').textContent = '기금 대여';
+      $('mTotal').textContent = '대여 없음';
+      $('mSub').innerHTML = '';
+    }
+
+    renderWelfare(m);
+
+    const ymd = t => { const d = t && t.toDate ? t.toDate() : null; return d ? `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}` : ''; };
+    const fundAt = ymd(m.publishedAt), welAt = ymd(m.welfare && m.welfare.publishedAt);
     $('mFoot').innerHTML = (notice ? `<b>${esc(notice)}</b><br>` : '')
-      + (at ? `총무팀 게시 ${at.getFullYear()}.${at.getMonth() + 1}.${at.getDate()} 기준<br>` : '')
-      + '실제 공제액은 급여명세서를 기준으로 합니다. 문의: 총무팀';
+      + (fundAt ? `기금 대여: 총무팀 게시 ${fundAt} 기준 · 실제 공제액은 급여명세서 기준<br>` : '')
+      + (welAt ? `선택적복지비: 총무팀 게시 ${welAt} 기준<br>` : '')
+      + '문의: 총무팀';
+
+    const hasFund = living.length || housing.length;
+    switchTab(currentTab || (hasFund || !m.welfare ? 'fund' : 'wel'));
     show('vMain');
   }
 }
