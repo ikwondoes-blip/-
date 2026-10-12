@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // 기금대여 조회 앱 보안 규칙
-// - 직원: 본인 문서만 읽기 가능. 쓰기는 "비밀번호 변경 완료" 표시만 가능.
+// - 직원: 본인 문서만 읽기 가능. 쓰기는 "비밀번호 변경 완료" 표시와 개인정보 동의 기록만 가능.
 // - 총무(관리자 계정): 모든 문서 읽기/쓰기.
 // 문서의 uid 필드와 로그인한 계정의 uid가 일치해야 하므로,
 // 누군가 같은 이름으로 계정을 먼저 만들어도 데이터를 볼 수 없습니다.
@@ -20,11 +20,17 @@ service cloud.firestore {
     match /members/{memberId} {
       allow read: if isAdmin() || isOwner(resource.data);
       allow create, delete: if isAdmin();
-      allow update: if isAdmin()
-        || (isOwner(resource.data)
-            && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['mustChange', 'pwChangedAt'])
-            && request.resource.data.mustChange == false);
+      allow update: if isAdmin() || ownerSelfUpdate();
+    }
+
+    // 직원 본인이 바꿀 수 있는 것: 비밀번호 변경 완료 표시, 개인정보 동의 기록
+    function ownerSelfUpdate() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return isOwner(resource.data)
+        && changed.hasOnly(['mustChange', 'pwChangedAt', 'consentVer', 'consentAt'])
+        && (!changed.hasAny(['mustChange']) || request.resource.data.mustChange == false)
+        && (!changed.hasAny(['consentAt']) || request.resource.data.consentAt == request.time)
+        && (!changed.hasAny(['consentVer']) || request.resource.data.consentVer is string);
     }
 
     match /{document=**} {
