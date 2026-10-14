@@ -111,6 +111,7 @@ input:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .timeline div{background:var(--bg2);border-radius:8px;padding:7px 8px;text-align:center}
 .timeline span{display:block;font-size:11px;color:var(--text2)}
 .timeline b{display:block;font-size:14px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
+.timeline small{display:block;font-size:11px;color:var(--text2);margin-top:1px}
 .hidden{display:none!important}
 .spinner{margin:60px auto;width:28px;height:28px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -463,7 +464,7 @@ function start(){
             ${!isLiving && e.htype ? `<span>${esc(e.htype)}</span>` : ''}
           </div>
           <div class="timeline">
-            <div><span>대여</span><b>${ymText(e.loanYM)}</b></div>
+            <div><span>대여</span><b>${ymText(e.loanYM)}</b>${e.loanAddYM ? `<small>추가 ${ymText(e.loanAddYM)}</small>` : ''}</div>
             <div><span>${isLiving ? '상환 시작' : '원금상환 시작'}</span><b>${ymText(e.repayStart || (isLiving ? '' : (e.repayDate || '').replace('월', '')))}</b></div>
             <div><span>상환 완료 예정</span><b>${ymText(e.endYM)}</b></div>
           </div>
