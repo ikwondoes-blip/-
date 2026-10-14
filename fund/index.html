@@ -105,6 +105,12 @@ input:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .agree{display:flex;gap:8px;align-items:flex-start;font-size:14px;margin-top:12px;line-height:1.45}
 .agree input{margin-top:3px;width:18px;height:18px;flex:none}
 .linkbtn{background:none;border:none;color:var(--text2);text-decoration:underline;font:inherit;font-size:12px;cursor:pointer;padding:0}
+.rule{font-size:12px;color:var(--text2);background:var(--bg2);border-radius:8px;padding:8px 10px;margin:-2px 0 12px;line-height:1.55}
+.rule b{color:var(--text)}
+.timeline{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:2px 0 12px}
+.timeline div{background:var(--bg2);border-radius:8px;padding:7px 8px;text-align:center}
+.timeline span{display:block;font-size:11px;color:var(--text2)}
+.timeline b{display:block;font-size:14px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
 .hidden{display:none!important}
 .spinner{margin:60px auto;width:28px;height:28px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -383,6 +389,13 @@ function start(){
   });
 
   $('btnChangeCancel').onclick = () => renderMain();
+
+  // 상환 원칙 (사내근로복지기금 대여 기준)
+  const RULES = {
+    living: '<b>생활안정자금</b> · 대여월부터 <b>50개월</b> 동안 원금을 똑같이 나눠 상환 · 이자는 남은 잔액의 <b>연 1%</b>를 매월 함께 공제',
+    housing: '<b>주택자금</b> · 대여 후 <b>3년 거치</b>(이자만 공제) → 거치가 끝난 다음 달부터 <b>120개월</b> 동안 원금을 똑같이 나눠 상환 · 이자는 남은 잔액의 <b>연 1%</b>'
+  };
+  const ymText = v => v ? esc(String(v).replace('.', '년 ').replace(/$/, '월')) : '-';
   $('btnGoChange').onclick = () => openChange(false);
   $('btnLogout').onclick = $('btnLogout2').onclick = () => { $('chCur').value = ''; currentTab = null; auth.signOut(); };
 
@@ -447,9 +460,12 @@ function start(){
           <div class="loan-head">
             ${arr.length > 1 ? `<span>${i + 1}건차</span>` : ''}
             <span class="badge badge-${esc(e.statusCls || 'active')}">${esc(e.status || '')}</span>
-            <span>${isLiving
-              ? (e.startYM ? '상환시작 ' + esc(e.startYM) : '')
-              : [e.htype, e.repayDate ? '원금상환 ' + e.repayDate : ''].filter(Boolean).map(esc).join(' · ')}</span>
+            ${!isLiving && e.htype ? `<span>${esc(e.htype)}</span>` : ''}
+          </div>
+          <div class="timeline">
+            <div><span>대여</span><b>${ymText(e.loanYM)}</b></div>
+            <div><span>${isLiving ? '상환 시작' : '원금상환 시작'}</span><b>${ymText(e.repayStart || (isLiving ? '' : (e.repayDate || '').replace('월', '')))}</b></div>
+            <div><span>상환 완료 예정</span><b>${ymText(e.endYM)}</b></div>
           </div>
           <dl class="rows">
             <dt>대여잔액</dt><dd>${won(e.bal)}</dd>
@@ -459,7 +475,7 @@ function start(){
             <dt>공제 후 잔액</dt><dd>${won(e.afterBal)}</dd>
           </dl>
         </div>`).join('');
-      return `<div class="card"><div class="sec-title"><h2>${title}</h2><span class="sec-total">공제 ${won(s.total)}</span></div>${items}</div>`;
+      return `<div class="card"><div class="sec-title"><h2>${title}</h2><span class="sec-total">공제 ${won(s.total)}</span></div><p class="rule">${RULES[isLiving ? 'living' : 'housing']}</p>${items}</div>`;
     };
     $('mFunds').innerHTML = (living.length || housing.length)
       ? block('생활안정자금', living, L, true) + block('주택자금', housing, H, false)
