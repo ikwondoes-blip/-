@@ -1,0 +1,29 @@
+# 총무 PC 화면(⑤ 회사 메일 연결)이 호출합니다. 직접 실행해도 됩니다(Actions → Run workflow).
+# 필요한 저장소 Secret: FIREBASE_SERVICE_ACCOUNT
+name: 직원 계정 회사 메일 연결
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: account-admin
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Firebase Admin SDK 설치
+        run: npm install --prefix "$RUNNER_TEMP/sdk" firebase-admin@12 --no-audit --no-fund --silent
+      - name: 회사 메일 연결
+        env:
+          ADMIN_SDK_DIR: ${{ runner.temp }}/sdk
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node .github/scripts/migrate-emails.mjs

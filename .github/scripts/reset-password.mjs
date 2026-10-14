@@ -18,7 +18,10 @@ admin.initializeApp(sa
   : { projectId: process.env.GCLOUD_PROJECT || 'demo-fund' }); // 에뮬레이터 테스트용
 
 try {
-  const user = await admin.auth().getUserByEmail(`${memberId}@${EMAIL_DOMAIN}`);
+  // 계정 메일이 회사 메일로 바뀌었을 수 있으므로 직원 문서의 uid로 계정을 찾음
+  const doc = await admin.firestore().doc(`members/${memberId}`).get();
+  const uid = doc.exists && doc.data().uid;
+  const user = uid ? await admin.auth().getUser(uid) : await admin.auth().getUserByEmail(`${memberId}@${EMAIL_DOMAIN}`);
   await admin.auth().updateUser(user.uid, { password: tempPw });
   await admin.auth().revokeRefreshTokens(user.uid);
   await admin.firestore().doc(`members/${memberId}`).set({

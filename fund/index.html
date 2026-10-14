@@ -143,6 +143,19 @@ input:focus{outline:2px solid var(--accent);outline-offset:-1px}
     <label class="check"><input id="inKeep" type="checkbox"> 이 기기에서 로그인 유지</label>
     <button class="btn" id="btnLogin" type="submit">로그인</button>
     <div class="msg" id="loginMsg"></div>
+    <p style="text-align:center;margin-top:14px"><button type="button" class="linkbtn" id="btnForgot" style="font-size:13px">비밀번호를 잊으셨나요?</button></p>
+  </form>
+
+  <!-- 비밀번호 찾기 -->
+  <form id="vForgot" class="card hidden">
+    <h2>비밀번호 찾기</h2>
+    <p class="desc">이름을 입력하면 <b>회사 메일</b>로 비밀번호 재설정 링크를 보내 드립니다. 메일의 링크를 눌러 새 비밀번호를 정한 뒤 다시 로그인하세요.</p>
+    <label for="fgName">이름</label>
+    <input id="fgName" type="text" maxlength="20" placeholder="홍길동" required>
+    <button class="btn" id="btnForgotSend" type="submit">재설정 메일 보내기</button>
+    <button class="btn btn-ghost" id="btnForgotBack" type="button">로그인으로 돌아가기</button>
+    <div class="msg" id="fgMsg"></div>
+    <p class="rules">· 메일이 안 보이면 스팸함도 확인해 주세요. 보내는 곳: noreply@asudi-fund.firebaseapp.com<br>· 회사 메일이 등록되지 않은 경우에는 업무지원팀에 문의해 주세요.</p>
   </form>
 
   <!-- 비밀번호 변경 -->
@@ -193,7 +206,7 @@ input:focus{outline:2px solid var(--accent);outline-offset:-1px}
       <h3>1. 개인정보 수집·이용</h3>
       <table>
         <tr><th>처리자</th><td>안산도시개발(주) 사내근로복지기금</td></tr>
-        <tr><th>항목</th><td>성명, 기금 대여 내역(대여잔액·상환원금·이자·공제액), 선택적복지비 내역(배정액·분기별 사용액·잔액), 로그인 비밀번호(암호화 저장), 접속 기록</td></tr>
+        <tr><th>항목</th><td>성명, 회사 이메일(로그인·비밀번호 재설정용), 기금 대여 내역(대여잔액·상환원금·이자·공제액), 선택적복지비 내역(배정액·분기별 사용액·잔액), 로그인 비밀번호(암호화 저장), 접속 기록</td></tr>
         <tr><th>목적</th><td>본인의 기금 대여 및 선택적복지비 현황 온라인 조회</td></tr>
         <tr><th>보유 기간</th><td><b>퇴직 또는 대여 상환·복지비 정산 종료 후 1년</b>, 동의 철회 시 즉시 삭제</td></tr>
       </table>
@@ -206,7 +219,7 @@ input:focus{outline:2px solid var(--accent);outline-offset:-1px}
       <table>
         <tr><th>이전받는 자</th><td>Google LLC (연락처: https://support.google.com/policies)</td></tr>
         <tr><th>이전 국가</th><td>미국 (Google Cloud 미국 멀티 리전 데이터센터)</td></tr>
-        <tr><th>이전 항목</th><td>위 1번의 모든 항목(성명, 기금 대여 내역, 선택적복지비 내역, 암호화된 비밀번호, 접속 기록)</td></tr>
+        <tr><th>이전 항목</th><td>위 1번의 모든 항목(성명, 회사 이메일, 기금 대여 내역, 선택적복지비 내역, 암호화된 비밀번호, 접속 기록)</td></tr>
         <tr><th>일시·방법</th><td>업무지원팀이 내역을 게시할 때와 직원이 로그인·조회할 때 암호화된 네트워크를 통해 전송</td></tr>
         <tr><th>목적·보유 기간</th><td>조회 서비스 운영 및 로그인 인증 / 1번의 보유 기간과 같음</td></tr>
       </table>
@@ -234,9 +247,9 @@ input:focus{outline:2px solid var(--accent);outline-offset:-1px}
 
 <script>
 const $ = id => document.getElementById(id);
-const VIEWS = ['vLoading','vConfig','vLogin','vConsent','vChange','vMain','vNone'];
+const VIEWS = ['vLoading','vConfig','vLogin','vForgot','vConsent','vChange','vMain','vNone'];
 // 동의 문구를 바꾸면 이 값을 올려 주세요. 모든 직원에게 다시 동의를 받습니다.
-const CONSENT_VER = '2026-10-2';
+const CONSENT_VER = '2026-10-3';
 function show(id){ VIEWS.forEach(v => $(v).classList.toggle('hidden', v !== id)); }
 function msg(el, text, ok){ el.textContent = text || ''; el.className = 'msg' + (text ? (ok ? ' ok' : ' err') : ''); }
 function won(n){ return (Math.round(n || 0)).toLocaleString('ko-KR') + '원'; }
@@ -267,14 +280,29 @@ function start(){
   const db = firebase.firestore();
   let member = null, forced = false;
 
-  const memberRef = user => db.collection('members').doc(user.email.split('@')[0]);
+  let memberDocRef = null;
+  const memberRef = () => memberDocRef;
+  async function loadMember(user) {
+    const q = await db.collection('members').where('uid', '==', user.uid).limit(1).get();
+    if (q.empty) return null;
+    memberDocRef = q.docs[0].ref;
+    return q.docs[0];
+  }
+  // 이름 → 로그인용 계정 메일 (회사 메일이 등록돼 있으면 회사 메일, 아니면 기존 방식)
+  async function loginEmailOf(name) {
+    try {
+      const d = await db.collection('logins').doc(fundIdOf(name)).get();
+      if (d.exists && d.data().email) return d.data().email;
+    } catch (e) {}
+    return fundEmailOf(name);
+  }
 
   auth.onAuthStateChanged(async user => {
     if (!user) { member = null; show('vLogin'); return; }
     show('vLoading');
     try {
-      const snap = await memberRef(user).get();
-      if (!snap.exists) throw { code: 'not-found' };
+      const snap = await loadMember(user);
+      if (!snap) throw { code: 'not-found' };
       member = snap.data();
     } catch (e) {
       $('noneTitle').textContent = '조회할 정보가 없습니다';
@@ -285,6 +313,31 @@ function start(){
       return;
     }
     next();
+  });
+
+  auth.languageCode = 'ko';
+  const maskEmail = e => e.replace(/^(.{2})[^@]*(@.*)$/, (m, a, b) => a + '****' + b);
+  $('btnForgot').onclick = () => { $('fgName').value = $('inName').value.trim(); $('btnForgotSend').disabled = false; msg($('fgMsg')); show('vForgot'); };
+  $('btnForgotBack').onclick = () => show('vLogin');
+  $('vForgot').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const name = $('fgName').value.replace(/\s+/g, '');
+    if (!name) return;
+    $('btnForgotSend').disabled = true;
+    msg($('fgMsg'));
+    try {
+      const email = await loginEmailOf(name);
+      if (email.endsWith('@' + FUND_EMAIL_DOMAIN)) {
+        msg($('fgMsg'), '회사 메일이 등록되어 있지 않습니다. 업무지원팀에 문의해 주세요.');
+        $('btnForgotSend').disabled = false;
+        return;
+      }
+      await auth.sendPasswordResetEmail(email, { url: location.origin + location.pathname });
+      msg($('fgMsg'), `${maskEmail(email)} 로 재설정 메일을 보냈습니다. 메일의 링크에서 새 비밀번호를 정한 뒤 로그인해 주세요.`, true);
+    } catch (e) {
+      msg($('fgMsg'), authErr(e));
+      $('btnForgotSend').disabled = false;
+    }
   });
 
   $('vLogin').addEventListener('submit', async ev => {
@@ -298,7 +351,7 @@ function start(){
       await auth.setPersistence($('inKeep').checked
         ? firebase.auth.Auth.Persistence.LOCAL
         : firebase.auth.Auth.Persistence.SESSION);
-      await auth.signInWithEmailAndPassword(fundEmailOf(name), pw);
+      await auth.signInWithEmailAndPassword(await loginEmailOf(name), pw);
       $('chCur').value = pw;
       $('inPw').value = '';
     } catch (e) {
@@ -333,7 +386,7 @@ function start(){
   $('btnAgree').onclick = async () => {
     $('btnAgree').disabled = true;
     try {
-      await memberRef(auth.currentUser).update({ consentVer: CONSENT_VER, consentAt: firebase.firestore.FieldValue.serverTimestamp() });
+      await memberRef().update({ consentVer: CONSENT_VER, consentAt: firebase.firestore.FieldValue.serverTimestamp() });
       member.consentVer = CONSENT_VER;
       member.consentAt = firebase.firestore.Timestamp.now();
       next();
@@ -376,7 +429,7 @@ function start(){
       await user.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(user.email, cur));
       await user.updatePassword(nw);
       if (member.mustChange) {
-        await memberRef(user).update({ mustChange: false, pwChangedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        await memberRef().update({ mustChange: false, pwChangedAt: firebase.firestore.FieldValue.serverTimestamp() });
         member.mustChange = false;
       }
       $('chCur').value = $('chNew').value = $('chNew2').value = '';
