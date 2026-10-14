@@ -1,5 +1,5 @@
 // 앱 화면 파일만 저장해 두고, 대여 정보(Firebase)는 항상 서버에서 새로 받아옵니다.
-const CACHE = 'fund-app-v3';
+const CACHE = 'fund-app-v5';
 const SHELL = ['./', 'index.html', 'firebase-config.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
